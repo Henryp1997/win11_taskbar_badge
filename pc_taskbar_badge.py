@@ -8,9 +8,9 @@ import sys
 import os
 import yaml
 from pathlib import Path
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QPoint
 from PySide6.QtGui import QPainter, QFont, QColor, QGuiApplication
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QWidget, QMenu
 
 
 class PCBadge(QWidget):
@@ -42,10 +42,17 @@ class PCBadge(QWidget):
         self.setAttribute(Qt.WA_ShowWithoutActivating, True)
         self.setFocusPolicy(Qt.NoFocus)
 
+        # Create context menu to show Close option when right clicking
+        self.close_context = QMenu(parent=self)
+        close_action = self.close_context.addAction("Close")
+        close_action.triggered.connect(QApplication.quit)
+
 
     def placeBottomLeft(self, available):
+        """ Force place the badge on the bottom left of the screen over the taskbar """
         x, y = available.left() + 5, available.bottom() + 5
         self.move(x, y)
+        self.badge_pos = (x, y)
 
 
     def paintEvent(self, _):
@@ -72,7 +79,11 @@ class PCBadge(QWidget):
                 self.close()
                 sys.exit()
                 return
-            
+
+        elif e.button() == Qt.RightButton:
+            self.close_context.popup(QPoint(*self.badge_pos))
+            QTimer.singleShot(0, lambda: self.setWidgetTopMost(self.close_context))
+
         super().mousePressEvent(e)
 
     
@@ -90,8 +101,15 @@ class PCBadge(QWidget):
         if self.isVisible():
             self.raise_()
 
+        self.setWidgetTopMost(self)
+
+        if self.close_context.isVisible():
+            self.setWidgetTopMost(self.close_context)
+
+
+    def setWidgetTopMost(self, widget):
         # Win32-level bump (more reliable vs taskbar)
-        if sys.platform == "win32" and self.isVisible():
+        if sys.platform == "win32" and widget.isVisible():
             import ctypes
             from ctypes import wintypes
 
@@ -103,9 +121,9 @@ class PCBadge(QWidget):
             SWP_SHOWWINDOW = 0x0040
 
             user32.SetWindowPos(
-                wintypes.HWND(int(self.winId())),
+                wintypes.HWND(int(widget.winId())),
                 wintypes.HWND(HWND_TOPMOST),
-                0, 0, 0, 0,
+                0, 0, 0, 0, # x, y, x_width, y_width
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW
             )
 
