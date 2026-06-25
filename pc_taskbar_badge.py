@@ -9,8 +9,9 @@ import os
 import yaml
 from pathlib import Path
 from PySide6.QtCore import Qt, QTimer, QPoint
-from PySide6.QtGui import QPainter, QFont, QColor, QGuiApplication
+from PySide6.QtGui import QPainter, QFont, QColor, QGuiApplication, QPainterPath
 from PySide6.QtWidgets import QApplication, QWidget, QMenu
+from get_taskbar_pos import get_taskbar_position
 
 
 class PCBadge(QWidget):
@@ -29,7 +30,7 @@ class PCBadge(QWidget):
         taskbar_height = window.height() - available.height()
         self.resize(150, 40 * (taskbar_height / 48))
 
-        self.placeBottomLeft(available)
+        self.placeWidgetInAvailableArea(available)
         self._drag_off = 0
 
         # Keep the badge from falling behind taskbar/other always-on-top windows
@@ -48,15 +49,26 @@ class PCBadge(QWidget):
         close_action.triggered.connect(QApplication.quit)
 
 
-    def placeBottomLeft(self, available):
-        """ Force place the badge on the bottom left of the screen over the taskbar """
+    def placeWidgetInAvailableArea(self, available):
+        """ 
+        Force place the badge on the taskbar
+        Place the widget on the bottom left if user has taskbar centered
+        Otherwise, attempt to locate optimal position for widget so it
+        doesn't clash with existing icons on the taskbar
+        """
+        pos, alignment = get_taskbar_position()
+        if pos != "bottom" and alignment != "left":
+            raise NotImplementedError(
+                "This app does not currently work for taskbar " \
+                "positions other than 'bottom', with 'left' icon/start alignment"
+            )
         x, y = available.left() + 5, available.bottom() + 5
         self.move(x, y)
         self.badge_pos = (x, y)
 
 
     def paintEvent(self, _):
-        from PySide6.QtGui import QPainterPath
+        """ Draw the rect and text of the widget """
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing, True)
         path = QPainterPath()
@@ -74,7 +86,9 @@ class PCBadge(QWidget):
 
     def mousePressEvent(self, e):
         if e.button() == Qt.LeftButton:
-            if (e.modifiers() & (Qt.ControlModifier | Qt.ShiftModifier)) == (Qt.ControlModifier | Qt.ShiftModifier):
+            if (
+                e.modifiers() & (Qt.ControlModifier | Qt.ShiftModifier)
+                ) == (Qt.ControlModifier | Qt.ShiftModifier):
                 # Close window if also holding CTRL and SHIFT
                 self.close()
                 sys.exit()
