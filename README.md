@@ -3,6 +3,9 @@ Small application to show a widget on top of the Windows 11 taskbar. Currently o
 
 <img src=./assets/screenshot.png>
 
+## How does it work
+Microsoft do not provide any API for building applications that live on the Windows 11 taskbar (https://learn.microsoft.com/en-us/windows/configuration/taskbar/?pivots=windows-11). As a workaround, we can manipulate the TOPMOST Windows property to force a widget to be painted last (i.e., on top of everything else). Combined with positioning the widget within the bounds of the taskbar rect, this creates the illusion of a native taskbar widget
+
 ## Setup
 Open `config.yml` in a text editor:
 - Set `text` to the desired display text. Set to 'null' to use the PC's hostname
