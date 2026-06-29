@@ -15,10 +15,17 @@ from PySide6.QtGui import QPainter, QFont, QColor, QGuiApplication, QPainterPath
 from PySide6.QtWidgets import QApplication, QWidget, QMenu
 from get_taskbar_pos import get_taskbar_position
 
-
 class PCBadge(QWidget):
-    def __init__(self, text, bg="#20242B", fg="#FFFFFF", border_radius=4):
+    def __init__(
+        self,
+        text: str,
+        bg: str = "#20242B",
+        fg: str = "#FFFFFF",
+        border_radius: int = 4,
+        debug: bool = False
+    ):
         super().__init__(None, Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint)
+        self.debug = debug
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.text = text
         self.bg = QColor(bg); self.fg = QColor(fg)
@@ -59,11 +66,12 @@ class PCBadge(QWidget):
         doesn't clash with existing icons on the taskbar
         """
         pos, alignment = get_taskbar_position()
-        if pos != "bottom" and alignment != "left":
-            raise NotImplementedError(
-                "This app does not currently work for taskbar " \
-                "positions other than 'bottom', with 'left' icon/start alignment"
-            )
+        if not self.debug:
+            if pos == "bottom" and alignment != "centre":
+                raise NotImplementedError(
+                    "This app does not currently work for taskbar " \
+                    "positions other than 'bottom', with 'left' icon/start alignment"
+                )
         x, y = available.left() + 5, available.bottom() + 5
         self.move(x, y)
         self.badge_pos = (x, y)
@@ -165,7 +173,12 @@ class PCBadge(QWidget):
 
 
 if __name__ == "__main__":
-    with open(Path(__file__).parent / "config.yml", "r") as f:
+    if getattr(sys, "frozen", False):
+        config_path = Path(sys.executable).parent
+    else:
+        config_path = Path(__file__).parent
+
+    with open(config_path / "config.yml", "r") as f:
         config = yaml.safe_load(f)
 
     text = config.get("text", None)
@@ -181,7 +194,8 @@ if __name__ == "__main__":
         text=text,
         bg=bg_colour,
         fg=fg_colour,
-        border_radius=border_radius
+        border_radius=border_radius,
+        debug=config.get("debug", False)
     )
     w.show()
     sys.exit(app.exec())

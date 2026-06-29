@@ -1,4 +1,5 @@
-text: null
-bg_colour: "#FF8A00"
-fg_colour: "#000000"
-border_radius: 4
+text: "hello, world!"
+bg_colour: "#0099FF"
+fg_colour: "#FFFFFF"
+border_radius: 8
+debug: true
